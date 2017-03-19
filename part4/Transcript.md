@@ -1,6 +1,6 @@
-#### If Statements
+### If Statements
 
-#### Case Expressions
+### Case Expressions
 
 Unlike `case` in JavaScript, `case` expressions in Elm do not "fall through"--meaning they don't have the potential to evoke multiple logic branches--thus there's no need for the usage of the `break` keyword. This has always been a [contentious thing] in javascript, and Elm removes the awkwardness around it.
 
@@ -133,6 +133,65 @@ Now we need to be careful because the compiler will force us to cover all possib
 ## A real-world example of Union Types
 
 > Video: Messages and audience questions
+
+Let's cover a few more topics, namely:
+
+- Type Aliases
+- Messages
+- Records
+
+```elm
+type alias Msg =
+    { operation : String
+    , data : Int
+    }
+
+-- an example of a record whose types match
+
+{ operation = "DELETE_BY_ID"
+, data = 3
+}
+
+-- That's fine. What if, however--we wanted to perform another type of operation?
+
+{ operation = "SET_QUERY"
+, data = "tutorial"
+}
+
+-- This is when Union Types will come in handy.
+```
+
+In this example from the codebase, the user is going to type in a _query_ to be sent to the GitHub API. These are both a type of `operation`, but one is clearly dealing with `Int` values and the other with `String` values.
+
+One solution might be to split that models, ie. `int-data` and `string-data` and make one or the other some nonsense value depending on which branch we wanted to execute.
+
+> Or, we could do this!
+
+```elm
+type Msg
+    = SetQuery String
+    | DeleteById Int
+```
+
+We can present our `Msg` _as_ a **Union Type**. Remember that Union types can take any type at their values. The cool part about this is that:
+
+1. Each individual message is only holding the data that it needs
+2. This scales for as many different `Msg` types as we want
+
+Here's some logic which utilizes the Union typing,
+
+```elm
+case msg of
+    SetQuery query ->
+        -- set query in the model here
+    DeleteById id ->
+        -- delete the result with this id here
+```
+
+We'll do exactly the same operation which showed up in Part 3, where we'll take `DeleteById` and filter the model accordingly.
+
+This is the preferred way to handle **messages**.
+
 
 
 
