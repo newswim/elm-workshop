@@ -72,3 +72,63 @@ One of the things that you can _**rely on**_ is that **anytime** you see a funct
 
 
 > ### Now Playing: Exercise Solutions (02:13:03 - 02:21:48)
+
+#### Question: How to you check that the update function is working and the data you're passing is correct?
+
+There is at least one simple, quick-and-dirty way to accomplish this which is to simply take that data and throw onto the screen, within a `text` function.
+
+Another, and safer way to is use `Debug.log`. This will output stack traces and other info to the console.
+
+##### How does `Debug.log` work?
+
+Because _everything_ in Elm is an **expression**, `Debug.log` has to return something. And, what it returns is _the thing that you give it_. So we effectively wrap some value in a `Debug.log` expression.
+
+
+> ### Now Playing: Audience Questions (02:21:48 - 02:24:12)
+
+#### Question: When you call `DeleteById`, is it "executing" that right away?
+
+Yes.. but it's important note the type of `DeleteById` itself, namely that its a function/value that _just_ returns a Msg. It doesn't actually "delete", we had to write the test function to pass to `List.filter` along with the list of results.
+
+This may be generally true of constructors within union types, they take values and return message wrapped in those values.
+
+## A note on `whitespace`
+
+For the most part, Elm® does not care about how you use whitespace, with a small number of crucial exception, the first being Case Expressions, which encode a rule that all the branches of your expression should start at the same level of indentation. The following is invalid Elm code:
+
+```elm
+update msg model =
+    case msg of
+        SetQuery query ->
+                { model | ... }
+            DeleteById id ->
+                { model | ... }
+```
+
+This is also true of Let blocks. Here's the good vs. bad indention according to our compiler:
+
+```elm
+
+-- n'uh uh
+exampleFn val =
+    let
+      foo =
+            1
+
+        bar =
+            2
+
+
+-- ye'ah huh
+exampleFn val =
+    let
+        foo =
+            1
+
+        bar =
+            2
+
+```
+
+
+> ### Good news, though! Other than that, nowhere else in Elm does indentation matter.
