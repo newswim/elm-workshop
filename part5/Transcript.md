@@ -38,7 +38,7 @@ We'll now pass our union type and decide behavior in our update function based u
 
 #### Note:
 
-Where are `OnInput` takes a function that will generate the message, `OnClick` just takes the message itself. So when we call it, we'll just pass an individual message rather than a function.
+Where the `OnInput` handler takes a function that will generate the message, `OnClick` just takes the message itself. So when we call it, we'll just pass an individual message rather than a function.
 
 Finally, we need to update our `update` function to account for the new  constructors present in `Msg`. So it's the basically the same as before, only now instead of using an If expression, we're going to use a Case expression to pull apart the different pieces of our Union Type and do the right thing.
 
