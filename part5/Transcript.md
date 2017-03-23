@@ -132,3 +132,142 @@ exampleFn val =
 
 
 > ### Good news, though! Other than that, nowhere else in Elm does indentation matter.
+
+
+> Now Playing: Result and Maybe -- (02:2412 - 02:31-09)
+
+## Result and Maybe
+
+Q: What we have Static data that represents real GitHub data, but what are we missing?
+A: The ability to actually talk to GitHub's API and get some _real_ results.
+
+There are two tasks which will go into that.
+
+1. Dealing with the big blog of JSON that we're going to get back
+2. Making the HTTP requests
+
+We're going to cover both of those, in that order.
+
+[INSERT IMAGE: "Exercise: resolve the TODOs in part5/Main.elm"]
+
+### JSON Decoding
+
+This will get us from blobs of JSON to **something we can work with**. Let's start with a familiar function to JavaScript, `parseInt()`.
+
+```js
+parseInt("42")  // 42
+```
+
+What's going on? If we pass a string containing valid numerical characters, parseInt will return actual numbers that correspond to those characters. If we pass it something else, say . .
+
+```js
+parseInt("Halibut")
+```
+
+JavaScript will return `NaN` -- which I guess is factually accurate. But not we're back into NaN poisoning, which remember is the way that NaN will propagate through computations on sets of numbers which contain a NaN value somewhere.
+
+Elm has a similar function called `String.toInt`, it's sort of like a drop in replacement for parseInt(). But, it works a little bit differently.
+
+```elm
+String.toInt "42"
+--> Ok 42
+```
+
+Notice that we do not get back the _number_ `42`, but we get a particular response `Ok 42`.
+
+`Ok` is a type constructor in a Union Type called `Result`, which holds two values, it's defined (basically) like so,
+
+```elm
+type Result =
+    Ok somethingGood
+    Err somethingBad
+```
+
+When we call `String.toInt`, we get back a value AND a message.
+
+```elm
+-- REPL
+$ String.toInt "42"
+>> Ok 42 : Result.Result String Int
+
+$ String.toInt "halibut"
+>> Err "could not convert string 'halibut' to an Int" : Result.Result String Int
+```
+
+Notice that these can contain different types. (***important*** )
+
+When valid, we get back `Ok` and an Int value, when the string we ask to be parsed is invalid the compiler returns `Err` followed by a string that tells us what went wrong.
+
+This is Elm's primary paradigm for implementing error handling.
+
+What this means is that when you call `String.toInt` on something, you cannot just use the return value right away, what you must do is _first_ run a Case Expression on the return value. In other words, you _have to_ handle the error. Error Handling then becomes something impossible to forget. If there is even the _possibility_ of failure, you're going to get a container with something like `Result`.
+
+### `Maybe`
+
+A "simplified" version of `Result`, in a way. In essence they are the same, but without the error message. It's type signature is,
+
+```elm
+type Maybe =
+    Just someValue
+    Nothing
+```
+
+If we think of functions that return `null` or `undefined` in JavaScript, then `Maybe` is maybe (lol) the closest analogue in Elm, whereas `Result` is a bit more like `try/catch`. Where you can _attempt_ something, and if it works proceed with regular execution, otherwise handle the error in some way.
+
+> It's like a container that holds at most one value."
+
+Here's an example of `Maybe` in action:
+
+```elm
+-- REPL
+$ List.head [ 5, 10, 15 ]
+>> Just 5 : Maybe.Maybe number
+```
+
+If we call on a non-empty list, we get `Just` and the value of that item. But, if we call `List.head` on `[]`, we get back `Nothing`.
+
+To compare this again to JavaScript, it we try to called `someArray[4]` and there is no 4th element in the array, the interpreter will return `undefined` -- this can be bad as we'll now have some code that returns a value which might not be handled. Again, in Elm that's not possible.
+
+## Pipelines
+> 02:31:09 - 02:40:11
+
+Let's look at this code sample:
+
+```elm
+List.filer (\num -> num < 5) [ 2, 4, 6, 8 ]
+```
+
+In English we might just say, "Filter out all the values that are less than 5" -- or "Only keep the numbers that are greater than 5" -- this is of course ridiculous, it's just fun to attempt to pronounce computer programs into common parlance, at times... :]
+
+Let's say that we then wanted to extend this tiny program, and reverse the list which is returned from the filter example. One way to do it is to just expand the expression, like so
+
+```elm
+List.reverse (List.filter (\num -> num < 5) [ 2, 4, 6, 8 ])
+```
+
+Just adding this additional function call adds quite a bit of linear logic to our code, so the meaning might not be immediately reachable by a quick scan. A popular way to refactor this is Elm is to use a **pipeline**.
+
+Here's an example:
+
+```elm
+[ 2, 4, 6, 8 ]
+    |> List.filter (\num -> num < 5)
+    |> List.reverse
+```
+
+How this works is to essentially perform the following, step-wise:
+
+1. Give me _something_ that takes one argument
+2. Call it, passing whatever was return from the previous step in the pipeline
+
+Pipelines are easier to expand upon.
+
+```elm
+[ 2, 4, 6, 8 ]
+    |> List.filter (\num -> num < 5)
+    |> List.reverse
+    |> List.map negate
+    |> List.head
+```
+
+Trying to write all of that as a single expression would obviously get convoluted. Instead, we can write the steps as a pipeline of functions and get a much clearer picture of what's happening.
