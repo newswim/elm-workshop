@@ -271,3 +271,65 @@ Pipelines are easier to expand upon.
 ```
 
 Trying to write all of that as a single expression would obviously get convoluted. Instead, we can write the steps as a pipeline of functions and get a much clearer picture of what's happening.
+
+This is simply known as "Pipeline Style" and one thing to note about it is that they are essentially _free_, meaning that Elm's compiler will do the work of unrolling all of the piped calls into the lengthy expressions that we're trying to avoid, for human-readability purposes. Ultimately, they get compiled to exactly the same JavaScript.
+
+#### Audience Questions
+
+> In Go-lang, error handling like `Maybe` would require a lot of boilerplate--is there a similar cost in Elm?
+
+Since with Elm not every/any value can be `null` or `nil`, you only have to handling errors _wherever an error is possible_. So, "defensive error handling" in Elm, doesn't really exist. Subjectively, I don't feel like it's a burden to handle errors in cases where they **might** arise, and to help that, the Elm ecosystem has a lot of helper functions to make engineering those portions of your code fairly quick and declarative.
+
+A good example of this is `Maybe.withDefault`:
+
+```elm
+$ List.head [ 1, 2, 3 ]
+>> Just 1
+
+$ List.head [ ]
+>> Nothing
+
+$ Maybe.withDefault 42 (List.head [ 1, 2, 3 ])
+>> 1
+
+$ Maybe.withDefault 42 (List.head [ ])
+>> 42
+```
+
+So you're only one function call away from having a very clean way of handling functions which return `Maybe` values. There's some other examples like `Maybe.map` which would handle only the `Just` value and leave the `Nothing` alone.
+
+These helper functions make it so that you don't have to write out the Case every single time.
+
+
+## Now playing: **Decoders**
+> (02:40:11 - 02:50:12)
+
+Or, where we try to _get at_ the values contained within JSON data structures.
+
+```elm
+$ decodeString float "123.45"
+>> Ok 123.45 : Result.Result String Float
+
+$ float
+>> <decoder> : Json.Decode.Decoder Float
+```
+
+The first argument is a means of specifying what we expect that the JSON will look like. It is not a function, but rather a label. Its type is simply `Decoder`. Decoders are a kind of opaque type.
+
+Decoders are _composable_.
+
+In this next example, `list` is not a Decoder, but rather a function which **returns** a Decoder of the type which we pass to it:
+
+```elm
+-- REPL
+
+$ decodeString (list int) "[1, 2, 3]"
+>> Ok [ 1, 2, 3 ]
+
+
+-- non-REPL, using a pipeline
+
+"[1, 2, 3]"
+    |> decodeString (list int)
+-- Ok [ 1, 2, 3 ]
+```
