@@ -333,3 +333,32 @@ $ decodeString (list int) "[1, 2, 3]"
     |> decodeString (list int)
 -- Ok [ 1, 2, 3 ]
 ```
+
+#### Decoding Objects
+
+Let's set up a hypothetical scenario where we have some kind of game, with some kind of score and some sort of Bool about the state of the game.
+
+
+```elm
+makeGameState score playing =
+    { score = score, playing = playing }
+
+decoder = ???
+
+decodeString decoder """{"score" : 5.5, "playing": true}"""
+```
+
+How do we write this decoder?
+
+There's a way to do it using **pipelines** again:
+
+```elm
+decoder =
+    decode makeGameState
+        |> required "score" float
+        |> required "playing" bool
+```
+
+The decoder's responsibility is defining the form of the object that we want to end up with. So `makeGameState` returns the record that we want, and then for each argument that the function takes, we'll perform the pipeline of operations.
+
+"Required" is a means of checking that the value is present and of the type that we expect.
