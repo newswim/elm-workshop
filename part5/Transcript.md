@@ -362,3 +362,175 @@ decoder =
 The decoder's responsibility is defining the form of the object that we want to end up with. So `makeGameState` returns the record that we want, and then for each argument that the function takes, we'll perform the pipeline of operations.
 
 "Required" is a means of checking that the value is present and of the type that we expect.
+
+The **order** of "pipes" and the order of arguments to the decode function will match.
+
+From that we can derive that the number of arguments and the number of steps in the pipeline **must _match_**. But don't worry, if you don't provide all of the arguments or miss a step in the pipeline, you'll get an error from the compiler.
+
+#### There is a shorthand, though . .
+
+We talked earlier about Type Aliases, but one thing which was only hinted at is that fact that these aliases also provide the us (for free) a function with a particular signature which can be used in our program. Here's a type alias for `GameState`:
+
+```elm
+type alias GameState =
+    { score : Float
+    , playing : Bool
+    }
+
+-- GameState : Float -> Bool -> GameState
+```
+
+When working with JSON, a lot of times you might find it necessary to write a bunch of boilerplate which has to do with values being populated for the correct keys in a new object/record somewhere. For example:
+
+```elm
+makeGameState : Float -> Bool -> GameState
+makeGameState score playing =
+    { score = score
+    , playing = playing
+    }
+```
+
+But notice that this function has _exactly_ the same signature as our aliased type, `GameState`--so we can just use that structure directly, skipping the boilerplate construction.
+
+Type Aliases are **callable**--anytime you see an UPPERCASE function in Elm, remember that it's not doing any kind of calculation, it has no function body: it's just returning some data. This is the one other instance in which we have Capitalized functions, namely type aliases for Records.
+
+So, based on the premises above, we can surmise..
+
+```elm
+makeGameState 2.3 True == GameState 2.3 True
+```
+
+This will come in handy later. Here's our decoder re-written to use the type alias rather than the `makeGameState` function. It's a fairly trivial change, but eliminates an entire class of code duplication.
+
+```elm
+type alias GameState =
+    { score : Float
+    , playing : Bool
+    }
+
+decoder =
+    decode GameState
+        |> required "score" float
+        |> required "playing" bool
+
+decodeString decoder
+    """{"score": 5.5, "playing" : true}"""
+-- Ok { score = 5.5, playing = True}
+```
+
+### Questions about Decoders
+> (02:50:12 - 02:57:15)
+
+> ### Q1. What happens if you're reading `GameState` from an external API which makes a naming change from 'score' to 'gameScore'?
+
+A1. You would _only_ have to change the part of the decoder function where that field is named, so for instance `|> required "score" float` you would rename `|> required "gameScore" float`. You wouldn't have to make that change anywhere else, unless maybe if there were tests which also required this name field. Otherwise, your internal implementation is completely decoupled from the external API.
+
+> ### Q2. How would you build up the object decoders without using Pipelining?
+
+A2. There are a couple of ways. One way is to use an alternate API, using `Json.Encode.object` and . There's actually a service which will write the decoders and type aliases for you called [JSON-to-Elm](https://eeue56.github.io/json-to-elm). Here's some example output from the JSON object, `{"score": 5.5, "playing" : true}`:
+
+```elm
+-- setting: "original"
+
+import Json.Encode
+import Json.Decode exposing (field)
+
+type alias Something =
+    { score : Float
+    , playing : Bool
+    }
+
+decodeSomething : Json.Decode.Decoder Something
+decodeSomething =
+    Json.Decode.map2 Something
+        (field "score" Json.Decode.float)
+        (field "playing" Json.Decode.bool)
+
+encodeSomething : Something -> Json.Encode.Value
+encodeSomething record =
+    Json.Encode.object
+        [ ("score",  Json.Encode.float <| record.score)
+        , ("playing",  Json.Encode.bool <| record.playing)
+        ]
+
+
+-- setting: "pipeline"
+import Json.Encode
+import Json.Decode
+import Json.Decode.Pipeline
+
+type alias Something =
+    { score : Float
+    , playing : Bool
+    }
+
+decodeSomething : Json.Decode.Decoder Something
+decodeSomething =
+    Json.Decode.Pipeline.decode Something
+        |> Json.Decode.Pipeline.required "score" (Json.Decode.float)
+        |> Json.Decode.Pipeline.required "playing" (Json.Decode.bool)
+
+encodeSomething : Something -> Json.Encode.Value
+encodeSomething record =
+    Json.Encode.object
+        [ ("score",  Json.Encode.float <| record.score)
+        , ("playing",  Json.Encode.bool <| record.playing)
+        ]
+
+
+-- setting: "English"
+import Json.Encode
+import Json.Decode exposing (field)
+
+type alias Something =
+    { score : Float
+    , playing : Bool
+    }
+
+decodeSomething : Json.Decode.Decoder Something
+decodeSomething =
+    Json.Decode.map2 Something
+        (field "score" Json.Decode.float)
+        (field "playing" Json.Decode.bool)
+
+encodeSomething : Something -> Json.Encode.Value
+encodeSomething record =
+    Json.Encode.object
+        [ ("score",  Json.Encode.float <| record.score)
+        , ("playing",  Json.Encode.bool <| record.playing)
+        ]
+{-
+If successful, create a record of the type Something
+It must have a field called `score` with the type Float
+It must have a field called `playing` with the type Bool
+-}
+```
+
+Notice the use of `map2`, these is a map function for dealing with 2 fields. Likewise there are `object2`, `object3`, `map5`, etc.
+
+
+> ### Q3. How would you decode a heterogeneous list?
+
+A3. Let's say you have a JavaScript array such as `[2, 4, 6, "hamburger"]`--totally valid JS, not valid Elm. What you can do is write a _custom_ decoder to solve this. This type is called `OneOf`.
+
+```elm
+$ oneOf [ intDecoder, stringDecoder]
+```
+
+You would give it a list of decoders, but you can't _literally_ do this, because of the inherent type mismatch. What you can do however is create a wrapper type which takes any type of argument and gives them a container function so that the items within the list are now all of the same type.
+
+```elm
+type IntOrString = ItIsAnInt Int | ItIsAString String
+
+-- REPL
+[ ItIsAnInt 3, ItIsAString "foo" ]
+-- [ItIsAnInt 3,ItIsAString "foo"] : List Repl.IntOrString
+```
+
+Notice that the list now contains only the type `IntOrString`. Brilliant!
+
+We can now attempt to handle these values with the decoder.
+
+```elm
+oneOf [ intToIntOrString, stringToIntOrString ]
+```
